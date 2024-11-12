@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -72,14 +73,14 @@ func (e *azureBlobExporter) start(_ context.Context, host component.Host) error 
 		}
 	case ServicePrincipal:
 		cred, err := azidentity.NewClientSecretCredential(
-			e.config.Auth.TenantId,
-			e.config.Auth.ClientId,
+			e.config.Auth.TenantID,
+			e.config.Auth.ClientID,
 			e.config.Auth.ClientSecret,
 			nil)
 		if err != nil {
 			return fmt.Errorf("failed to create service principal credential: %w", err)
 		}
-		e.client, err = azblob.NewClient(e.config.Url, cred, nil)
+		e.client, err = azblob.NewClient(e.config.URL, cred, nil)
 		if err != nil {
 			return fmt.Errorf("failed to create client with service principal: %w", err)
 		}
@@ -88,18 +89,18 @@ func (e *azureBlobExporter) start(_ context.Context, host component.Host) error 
 		if err != nil {
 			return fmt.Errorf("failed to create system managed identity credential: %w", err)
 		}
-		e.client, err = azblob.NewClient(e.config.Url, cred, nil)
+		e.client, err = azblob.NewClient(e.config.URL, cred, nil)
 		if err != nil {
 			return fmt.Errorf("failed to create client with system managed identity: %w", err)
 		}
 	case UserManagedIdentity:
 		cred, err := azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
-			ID: azidentity.ClientID(e.config.Auth.ClientId),
+			ID: azidentity.ClientID(e.config.Auth.ClientID),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create user managed identity credential: %w", err)
 		}
-		e.client, err = azblob.NewClient(e.config.Url, cred, nil)
+		e.client, err = azblob.NewClient(e.config.URL, cred, nil)
 		if err != nil {
 			return fmt.Errorf("failed to create client with user managed identity: %w", err)
 		}
@@ -109,7 +110,7 @@ func (e *azureBlobExporter) start(_ context.Context, host component.Host) error 
 	return nil
 }
 
-func (e *azureBlobExporter) generateBlobName(data map[string]interface{}) (string, error) {
+func (e *azureBlobExporter) generateBlobName(data map[string]string) (string, error) {
 	// Get current time
 	now := time.Now()
 
@@ -121,7 +122,7 @@ func (e *azureBlobExporter) generateBlobName(data map[string]interface{}) (strin
 	data["Minute"] = now.Format(e.config.BlobNameFormat.Minute)
 	data["Second"] = now.Format(e.config.BlobNameFormat.Second)
 
-	data["SerialNum"] = randomInRange(1, 1000000)
+	data["SerialNum"] = strconv.Itoa(randomInRange(1, 1000000))
 
 	// Execute the template
 	var result bytes.Buffer
@@ -144,7 +145,7 @@ func (e *azureBlobExporter) ConsumeMetrics(ctx context.Context, md pmetric.Metri
 	}
 
 	// Generate a unique blob name
-	params := map[string]interface{}{
+	params := map[string]string{
 		"BlobName":      e.config.BlobNameFormat.BlobName.Metrics,
 		"FileExtension": fileExtensionMap[e.config.FormatType],
 	}
@@ -175,7 +176,7 @@ func (e *azureBlobExporter) ConsumeLogs(ctx context.Context, ld plog.Logs) error
 	}
 
 	// Generate a unique blob name
-	params := map[string]interface{}{
+	params := map[string]string{
 		"BlobName":      e.config.BlobNameFormat.BlobName.Logs,
 		"FileExtension": fileExtensionMap[e.config.FormatType],
 	}
@@ -198,7 +199,7 @@ func (e *azureBlobExporter) ConsumeLogs(ctx context.Context, ld plog.Logs) error
 	return nil
 }
 
-func (e *azureBlobExporter) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
+func (e *azureBlobExporter) ConsumeTraces(_ context.Context, td ptrace.Traces) error {
 	// Marshal the metrics data
 	data, err := e.marshaller.marshalTraces(td)
 	if err != nil {
@@ -206,7 +207,7 @@ func (e *azureBlobExporter) ConsumeTraces(ctx context.Context, td ptrace.Traces)
 	}
 
 	// Generate a unique blob name
-	params := map[string]interface{}{
+	params := map[string]string{
 		"BlobName":      e.config.BlobNameFormat.BlobName.Traces,
 		"FileExtension": fileExtensionMap[e.config.FormatType],
 	}
