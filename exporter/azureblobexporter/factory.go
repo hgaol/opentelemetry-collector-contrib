@@ -64,7 +64,7 @@ func createLogsExporter(ctx context.Context,
 
 	azBlobExporter := newAzureBlobExporter(config.(*Config), params.Logger)
 
-	return exporterhelper.NewLogsExporter(ctx, params,
+	return exporterhelper.NewLogs(ctx, params,
 		config,
 		azBlobExporter.ConsumeLogs,
 		exporterhelper.WithStart(azBlobExporter.start))
@@ -76,7 +76,7 @@ func createMetricsExporter(ctx context.Context,
 
 	azBlobExporter := newAzureBlobExporter(config.(*Config), params.Logger)
 
-	return exporterhelper.NewMetricsExporter(ctx, params,
+	return exporterhelper.NewMetrics(ctx, params,
 		config,
 		azBlobExporter.ConsumeMetrics,
 		exporterhelper.WithStart(azBlobExporter.start))
@@ -88,7 +88,7 @@ func createTracesExporter(ctx context.Context,
 
 	azBlobExporter := newAzureBlobExporter(config.(*Config), params.Logger)
 
-	return exporterhelper.NewTracesExporter(ctx,
+	return exporterhelper.NewTraces(ctx,
 		params,
 		config,
 		azBlobExporter.ConsumeTraces,
